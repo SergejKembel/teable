@@ -29,6 +29,8 @@ import {
   DeleteBaseCollaboratorRo,
   addBaseCollaboratorRoSchema,
   AddBaseCollaboratorRo,
+  ImportBaseRo,
+  importBaseRoSchema,
 } from '@teable/openapi';
 import type {
   CreateBaseInvitationLinkVo,
@@ -51,6 +53,8 @@ import { Permissions } from '../auth/decorators/permissions.decorator';
 import { ResourceMeta } from '../auth/decorators/resource_meta.decorator';
 import { CollaboratorService } from '../collaborator/collaborator.service';
 import { InvitationService } from '../invitation/invitation.service';
+import { BaseExportService } from './base-export.service';
+import { BaseImportService } from './base-import.service';
 import { BaseQueryService } from './base-query/base-query.service';
 import { BaseService } from './base.service';
 import { DbConnectionService } from './db-connection.service';
@@ -59,6 +63,8 @@ import { DbConnectionService } from './db-connection.service';
 export class BaseController {
   constructor(
     private readonly baseService: BaseService,
+    private readonly baseExportService: BaseExportService,
+    private readonly baseImportService: BaseImportService,
     private readonly dbConnectionService: DbConnectionService,
     private readonly collaboratorService: CollaboratorService,
     private readonly baseQueryService: BaseQueryService,
@@ -72,8 +78,19 @@ export class BaseController {
   async createBase(
     @Body(new ZodValidationPipe(createBaseRoSchema))
     createBaseRo: ICreateBaseRo
-  ): Promise<ICreateBaseVo> {
+  ) {
     return await this.baseService.createBase(createBaseRo);
+  }
+
+  @Post('import')
+  @Permissions('base|create')
+  @ResourceMeta('spaceId', 'body')
+  @EmitControllerEvent(Events.BASE_CREATE)
+  async importBase(
+    @Body(new ZodValidationPipe(importBaseRoSchema))
+    importBaseRo: ImportBaseRo
+  ): Promise<any> {
+    return await this.baseImportService.importBase(importBaseRo);
   }
 
   @Post('duplicate')
@@ -295,5 +312,14 @@ export class BaseController {
     addBaseCollaboratorRo: AddBaseCollaboratorRo
   ) {
     return await this.collaboratorService.addBaseCollaborators(baseId, addBaseCollaboratorRo);
+  }
+
+  @Get(':baseId/export')
+  async exportBase(
+    @Param('baseId') baseId: string
+    // @Body(new ZodValidationPipe(workflowJsonRoSchema))
+    // workflowRo: IWorkflowRo
+  ) {
+    return await this.baseExportService.exportBaseZip(baseId);
   }
 }
